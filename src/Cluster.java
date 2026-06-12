@@ -10,6 +10,9 @@ public class Cluster {
     public Cluster() {
         this.pixels = new ArrayList<>();
     }
+    public Cluster(List<Pixel> c) {
+        this.pixels = c;
+    }
 
     public void ajouterPixel(Pixel p) {
         pixels.add(p);
