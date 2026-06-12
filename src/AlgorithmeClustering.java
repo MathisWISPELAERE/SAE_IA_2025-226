@@ -1,5 +1,7 @@
+import java.util.List;
+
 public interface AlgorithmeClustering {
 
-    int[] cluster(double[][] donnees);
+    List<Cluster> cluster(double[][] donnees);
 
 }
