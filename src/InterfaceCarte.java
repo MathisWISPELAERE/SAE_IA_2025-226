@@ -33,6 +33,10 @@ public class InterfaceCarte extends JFrame {
     // ---------- Paramètres HAC ----------
     private static final double HAC_SEUIL = 20.0;
 
+    // ---------- Paramètres DBSCAN ----------
+    private static final double DBSCAN_EPS     = 2.0;
+    private static final int    DBSCAN_MIN_PTS = 4;
+
     // ---------- État applicatif ----------
     private BufferedImage imageOriginale;   // image brute chargée depuis le disque
     private BufferedImage imageParBiome;    // pixels recolorés avec la couleur moyenne de leur cluster KMeans
@@ -50,6 +54,7 @@ public class InterfaceCarte extends JFrame {
     private final JList<String> listeCartes;
     private final JToggleButton btnBasculer;
     private final JCheckBox     chkEcosysteme;
+    private final JComboBox<String> comboAlgoEco;
     private final JLabel        labelStatus;
 
     // nomBiome → couleur moyenne (utilisée dans la légende)
@@ -114,6 +119,15 @@ public class InterfaceCarte extends JFrame {
         chkEcosysteme.setEnabled(false);   // activée uniquement en vue biome
         chkEcosysteme.addActionListener(e -> basculerEcosysteme());
 
+        comboAlgoEco = new JComboBox<>(new String[]{"DBSCAN", "HAC"});
+        comboAlgoEco.setSelectedIndex(0); // DBSCAN par défaut
+        comboAlgoEco.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        comboAlgoEco.setEnabled(false);   // activée uniquement en vue biome
+        // Relancer l'algo si on change de sélection pendant que la checkbox est cochée
+        comboAlgoEco.addActionListener(e -> {
+            if (modeEcosysteme) basculerEcosysteme();
+        });
+
         labelStatus = new JLabel("  Aucune carte chargée");
         labelStatus.setFont(new Font("SansSerif", Font.ITALIC, 11));
         labelStatus.setForeground(Color.DARK_GRAY);
@@ -132,6 +146,8 @@ public class InterfaceCarte extends JFrame {
         panelControles.add(btnBasculer);
         panelControles.add(Box.createVerticalStrut(4));
         panelControles.add(chkEcosysteme);
+        panelControles.add(Box.createVerticalStrut(4));
+        panelControles.add(comboAlgoEco);
 
         JPanel panelDroit = new JPanel(new BorderLayout(0, 6));
         panelDroit.setBorder(BorderFactory.createCompoundBorder(
@@ -174,6 +190,7 @@ public class InterfaceCarte extends JFrame {
         btnBasculer.setEnabled(false);
         chkEcosysteme.setSelected(false);
         chkEcosysteme.setEnabled(false);
+        comboAlgoEco.setEnabled(false);
         couleursBiomes.clear();
         panelLegende.removeAll();
         labelStatus.setText("  Chargement…");
@@ -267,9 +284,17 @@ public class InterfaceCarte extends JFrame {
             System.out.println("  HAC sur le plus petit cluster (" + cible.getBiome() + ") : " + pixelsCibles.size() + " pixels");
         }
 
-        // Lancer HAC
-        List<Cluster> sousClusters = new HACEcosystemes(HAC_SEUIL).cluster(pixelsCibles);
-        System.out.println("  HAC terminé : " + sousClusters.size() + " sous-clusters");
+        // Choisir l'algorithme selon la sélection du combo
+        String algoChoisi = (String) comboAlgoEco.getSelectedItem();
+        AlgorithmeClustering algo;
+        if ("HAC".equals(algoChoisi)) {
+            algo = new HACEcosystemes(HAC_SEUIL);
+        } else {
+            algo = new DBSCAN(DBSCAN_EPS, DBSCAN_MIN_PTS);
+        }
+
+        List<Cluster> sousClusters = algo.cluster(pixelsCibles);
+        System.out.println("  " + algoChoisi + " terminé : " + sousClusters.size() + " sous-clusters");
 
         // Étape A : fond en niveaux de gris (luminance de l'image originale)
         imageHAC = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
@@ -446,8 +471,9 @@ public class InterfaceCarte extends JFrame {
         biomeFiltreActif = null;
         chkEcosysteme.setSelected(false);
 
-        // La checkbox est disponible uniquement en vue biome
+        // La checkbox et le combo sont disponibles uniquement en vue biome
         chkEcosysteme.setEnabled(modeParBiome);
+        comboAlgoEco.setEnabled(modeParBiome);
 
         btnBasculer.setText(modeParBiome ? "🎨 Vue biomes" : "🗺  Vue normale");
         mettreAJourStylesLegende();
@@ -460,8 +486,9 @@ public class InterfaceCarte extends JFrame {
         if (modeEcosysteme) {
             // Toujours relancer HAC : le biome cible peut avoir changé
             imageHAC = null;
-            labelStatus.setText("  Calcul HAC en cours…");
+            labelStatus.setText("  Calcul " + comboAlgoEco.getSelectedItem() + " en cours…");
             chkEcosysteme.setEnabled(false);
+            comboAlgoEco.setEnabled(false);
             btnBasculer.setEnabled(false);
 
             SwingWorker<Void, Void> worker = new SwingWorker<>() {
@@ -473,6 +500,7 @@ public class InterfaceCarte extends JFrame {
                 @Override
                 protected void done() {
                     chkEcosysteme.setEnabled(true);
+                    comboAlgoEco.setEnabled(true);
                     btnBasculer.setEnabled(true);
                     labelStatus.setText("  Vue écosystèmes prête");
                     mettreAJourStylesLegende();

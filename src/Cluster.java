@@ -139,6 +139,13 @@ public class Cluster {
         );
     }
 
+    public void finaliser() {
+        calculerCouleurMoyenne();
+        calculerCentroideSpatial();
+        detecterBiome();
+        // recalcule a son appel plutot qu'à chaque étape de la construction du cluster 
+    }
+
     @Override
     public String toString() {
         return "Cluster[" + getNbPixels() + " px, biome=" + biome

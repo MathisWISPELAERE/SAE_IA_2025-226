@@ -68,6 +68,10 @@ public class DBSCAN implements AlgorithmeClustering {
             }
         }
 
+        for (Cluster c : listeDeClusters) {
+            c.finaliser();
+        }
+
         System.out.println("[DBSCAN] Total : " + listeDeClusters.size() + " clusters créés.");
         return listeDeClusters;
     }
@@ -75,10 +79,6 @@ public class DBSCAN implements AlgorithmeClustering {
     private void etendreCluster(List<Integer> voisins, int clusterId, int[] labels, double[][] donnees) {
         for (int i = 0; i < voisins.size(); i++) {
             int voisinId = voisins.get(i);
-
-            if (labels[voisinId] == NOISE) {
-                labels[voisinId] = clusterId;
-            }
 
             if (labels[voisinId] == UNVISITED) {
                 labels[voisinId] = clusterId;
@@ -91,6 +91,8 @@ public class DBSCAN implements AlgorithmeClustering {
                         }
                     }
                 }
+            } else if (labels[voisinId] == NOISE) {
+                labels[voisinId] = clusterId;
             }
         }
     }
@@ -100,9 +102,9 @@ public class DBSCAN implements AlgorithmeClustering {
         double[] pointA = donnees[indexPoint];
 
         for (int i = 0; i < donnees.length; i++) {
-            if (distanceEuclidienne(pointA, donnees[i]) <= eps) {
-                voisins.add(i);
-            }
+            if (i != indexPoint && distanceEuclidienne(pointA, donnees[i]) <= eps) {
+               voisins.add(i);
+        }
         }
         return voisins;
     }
